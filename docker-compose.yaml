@@ -1,0 +1,54 @@
+version: '3.7'
+
+services:
+  lambda:
+    image: public.ecr.aws/lambda/nodejs:18-arm64
+    environment:
+      AWS_ACCESS_KEY_ID: 'DUMMYIDEXAMPLE'
+      AWS_SECRET_ACCESS_KEY: 'DUMMYEXAMPLEKEY'
+      REGION: 'eu-west-1'
+      AWS_ENDPOINT_URL: http://dyanmodb-local:8000
+      AWS_ENDPOINT_URL_DYNAMODB: http://dyanmodb-local:8000
+      AWS_ENDPOINT_SERVICE: http://dyanmodb-local:8000
+      SESSION_TABLE: sessions
+    volumes:
+      - ./home/index.js:/var/task/app.js
+    ports:
+      - '8080:8080'
+    command: ["app.handler"]
+    depends_on:
+     - "dynamodb-local"
+    networks:
+      - default
+
+  
+  dynamodb-local:
+    command: "-jar DynamoDBLocal.jar -sharedDb -dbPath ./data"
+    image: "amazon/dynamodb-local:latest"
+    container_name: dynamodb-local
+    ports:
+      - "8000:8000"
+    volumes:
+      - "./docker/dynamodb:/home/dynamodblocal/data"
+    working_dir: /home/dynamodblocal
+    networks:
+      - default
+    
+    
+
+  playwright:
+    build: 
+      dockerfile: ./playwright.Dockerfile
+    volumes:
+      - ./playwright.config.ts:/app/playwright.config.ts
+      - ./tests:/app/tests
+    depends_on:
+      - lambda
+    networks:
+      - default
+    command: yarn run playwright test
+    environment:
+      AWS_ACCESS_KEY_ID: 'DUMMYIDEXAMPLE'
+      AWS_SECRET_ACCESS_KEY: 'DUMMYEXAMPLEKEY'
+      REGION: 'eu-west-1'
+
